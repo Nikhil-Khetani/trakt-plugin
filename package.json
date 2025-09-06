@@ -1,6 +1,6 @@
 {
 	"name": "trakt-plugin",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Creates notes for watched movies and TV shows from Trakt.tv with ratings, watch progress and notes sections for episodes.",
 	"main": "main.js",
 	"scripts": {

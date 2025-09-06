@@ -1,7 +1,7 @@
 {
 	"id": "trakt-plugin",
 	"name": "Trakt Plugin",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Creates notes for watched movies and TV shows from Trakt.tv with ratings, watch progress and notes sections for episodes.",
 	"author": "Nikhil Khetani",
