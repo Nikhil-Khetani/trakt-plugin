@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "trakt-plugin",
+	"name": "Trakt Plugin",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
+	"description": "Creates notes for watched movies and TV shows from Trakt.tv with ratings, watch progress and notes sections for episodes.",
+	"author": "Nikhil Khetani",
+	"authorUrl": "https://github.com/Nikhil-Khetani",
 	"fundingUrl": "https://obsidian.md/pricing",
 	"isDesktopOnly": false
 }
