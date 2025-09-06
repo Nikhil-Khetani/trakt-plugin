@@ -140,11 +140,11 @@ export default class TraktPlugin extends Plugin {
 
 				const foldername = normalizePath('/Trakt')
 				if (!this.app.vault.getAbstractFileByPath(foldername)) {
-					await this.app.vault.createFolder(sanitizeFileName(foldername))
+					await this.app.vault.createFolder(foldername)
 				}
 				const showfoldername = normalizePath('/Trakt/Shows')
 				if (!this.app.vault.getAbstractFileByPath(showfoldername)) {
-					await this.app.vault.createFolder(sanitizeFileName(showfoldername))
+					await this.app.vault.createFolder(showfoldername)
 				}
 				// Also include "Finished Watching" where appropriate
 				const allWatchedHistory: TraktWatchedShow[] = await this.trakt.sync.watched({ type: 'shows' })
