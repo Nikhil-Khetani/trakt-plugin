@@ -328,33 +328,39 @@ export default class TraktPlugin extends Plugin {
 									   const episodeNum = headerMatch[2];
 									   const block = existingEpisodeBlocks.find(b => b.startsWith(`S${seasonNum} Ep${episodeNum}`));
 									   if (block) {
-										   const updatedWatchedDate = header.match(/\| Watched: ([^\n]+)/)?.[0];
-										   const updatedRating = header.match(/\| (\d+)\/10/)?.[0];
+										   // Parse updated header for prefix, title, watched date, and rating
+										   const headerParts = header.match(/^#### (S\d+ Ep\d+) \| ([^|\n]+)(.*)$/);
+										   let prefix = '', episodeTitle = '', rest = '';
+										   if (headerParts) {
+											   prefix = headerParts[1];
+											   episodeTitle = headerParts[2].trim();
+											   rest = headerParts[3] || '';
+										   }
+										   const updatedWatchedDate = rest.match(/\| Watched: [^|\n]+/)?.[0] || '';
+										   const updatedRating = rest.match(/\| \d+\/10/)?.[0] || '';
 										   let mergedBlock = block.trim();
-										   // Remove any existing rating from the block
+										   // Remove any existing rating and watched date from the block
 										   mergedBlock = mergedBlock.replace(/\| \d+\/10/g, '');
-										   // Remove any duplicate watched date
-										   if (updatedWatchedDate) {
-											   mergedBlock = mergedBlock.replace(/\| Watched: \[\[[^\]]+\]\]/g, '');
-										   }
-										   // Rebuild the header with updated watched date and rating
-										   // Extract episode title from the header string
-										   const titleMatch = header.match(/^#### S\d+ Ep\d+ \| ([^|\n]+)/);
-										   const episodeTitle = titleMatch ? titleMatch[1].trim() : '';
-										   let rebuiltHeader = `S${seasonNum} Ep${episodeNum} | ${episodeTitle}`;
-										   // Only append watched date if not already present
-										   if (updatedWatchedDate && !rebuiltHeader.includes(updatedWatchedDate)) {
-											   rebuiltHeader += updatedWatchedDate;
-										   }
-										   // Only append rating if not already present
-										   if (updatedRating && !rebuiltHeader.includes(updatedRating)) {
-											   rebuiltHeader += updatedRating;
-										   }
+										   mergedBlock = mergedBlock.replace(/\| Watched: \[\[[^\]]+\]\]/g, '');
+										   // Rebuild header: always prefix, title, then watched date, then rating
+										   let rebuiltHeader = `${prefix} | ${episodeTitle}`;
+										   if (updatedWatchedDate) rebuiltHeader += ` ${updatedWatchedDate}`;
+										   if (updatedRating) rebuiltHeader += ` ${updatedRating}`;
 										   // Add any extra notes/comments from the original block (after the first line)
 										   const extra = mergedBlock.split('\n').slice(1).join('\n');
 										   mergedEpisodes += `#### ${rebuiltHeader}${extra ? '\n' + extra : ''}\n`;
 									   } else {
-										   mergedEpisodes += `${header}\n`;
+										   // Robustly split at the first '|' after episode number, trim and rebuild
+										   let pipeIdx = header.indexOf('|');
+										   let normalizedHeader = '';
+										   if (pipeIdx !== -1) {
+											   let beforePipe = header.slice(0, pipeIdx).trimEnd();
+											   let afterPipe = header.slice(pipeIdx);
+											   normalizedHeader = `${beforePipe} ${afterPipe}`;
+										   } else {
+											   normalizedHeader = header;
+										   }
+										   mergedEpisodes += normalizedHeader + '\n';
 									   }
 								   }
 								updatedContent = updatedContent.replace(/## Episodes[\s\S]*$/m, mergedEpisodes.trimEnd());
