@@ -343,9 +343,12 @@ export default class TraktPlugin extends Plugin {
 										   mergedBlock = mergedBlock.replace(/\| \d+\/10/g, '');
 										   mergedBlock = mergedBlock.replace(/\| Watched: \[\[[^\]]+\]\]/g, '');
 										   // Rebuild header: always prefix, title, then watched date, then rating
-										   let rebuiltHeader = `${prefix} | ${episodeTitle}`;
+										   // Ensure only a single space before the '|' separator
+										   let rebuiltHeader = `${prefix} | ${episodeTitle}`.replace(/\s+\|/, ' |');
 										   if (updatedWatchedDate) rebuiltHeader += ` ${updatedWatchedDate}`;
 										   if (updatedRating) rebuiltHeader += ` ${updatedRating}`;
+										   // Remove any duplicate spaces before the '|' after appending
+										   rebuiltHeader = rebuiltHeader.replace(/\s+\|/, ' |');
 										   // Add any extra notes/comments from the original block (after the first line)
 										   const extra = mergedBlock.split('\n').slice(1).join('\n');
 										   mergedEpisodes += `#### ${rebuiltHeader}${extra ? '\n' + extra : ''}\n`;
