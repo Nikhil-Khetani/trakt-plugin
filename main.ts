@@ -261,32 +261,31 @@ export default class TraktPlugin extends Plugin {
 								const existingLines = existingWatchProgress.split('\n');
 								const mergedLines: string[] = [];
 
-								// Merge each season line, updating rating if present
-								for (const updatedLine of updatedLines) {
-									const seasonMatch = updatedLine.match(/- Season (\d+):/);
-									if (seasonMatch) {
-										const seasonNum = seasonMatch[1];
-										const existingLine = existingLines.find(l => l.startsWith(`- Season ${seasonNum}:`));
-										if (existingLine) {
-											// Replace rating in existing line with updated rating
-											const updatedRatingMatch = updatedLine.match(/\| (\d+)\/10/);
-											let mergedLine = existingLine;
-											if (updatedRatingMatch) {
-												if (/\| (\d+)\/10/.test(existingLine)) {
-													mergedLine = existingLine.replace(/\| (\d+)\/10/, `| ${updatedRatingMatch[1]}/10`);
-												} else {
-													mergedLine += ` | ${updatedRatingMatch[1]}/10`;
-												}
-											}
-											mergedLines.push(mergedLine);
-										} else {
-											mergedLines.push(updatedLine);
-										}
-									} else {
-										mergedLines.push(updatedLine);
-									}
-								}
-								finalWatchProgress = mergedLines.join('\n');
+								   // Merge each season line, always updating watched count and rating, but preserve extra notes/comments
+								   for (const updatedLine of updatedLines) {
+									   const seasonMatch = updatedLine.match(/- Season (\d+):/);
+									   if (seasonMatch) {
+										   const seasonNum = seasonMatch[1];
+										   const existingLine = existingLines.find(l => l.startsWith(`- Season ${seasonNum}:`));
+										   if (existingLine) {
+											   // Extract any extra notes/comments after the watched/rating part
+											   // Match: - Season X: Watched N / M episodes [| R/10] [extra]
+											   const extraMatch = existingLine.match(/^(.*?episodes(?:\s*\|\s*\d+\/10)?)(.*)$/);
+											   let extra = '';
+											   if (extraMatch) {
+												   extra = extraMatch[2];
+											   }
+											   // Use the updated watched count and rating, append any extra
+											   let mergedLine = updatedLine + extra;
+											   mergedLines.push(mergedLine);
+										   } else {
+											   mergedLines.push(updatedLine);
+										   }
+									   } else {
+										   mergedLines.push(updatedLine);
+									   }
+								   }
+								   finalWatchProgress = mergedLines.join('\n');
 							}
 
 							if (/## Watch Progress[\s\S]*?(?=\n## General Notes|\n## Notes|\n## Episodes|\n$)/.test(restContent)) {
@@ -323,36 +322,41 @@ export default class TraktPlugin extends Plugin {
 								const existingEpisodeBlocks = existingEpisodesSection.split(/^#### /gm).filter(Boolean);
 
 								let mergedEpisodes = '## Episodes\n';
-								for (const headerMatch of updatedEpisodeHeaders) {
-									let header = headerMatch[0];
-									const seasonNum = headerMatch[1];
-									const episodeNum = headerMatch[2];
-									const block = existingEpisodeBlocks.find(b => b.startsWith(`S${seasonNum} Ep${episodeNum}`));
-									if (block) {
-										const updatedWatchedDate = header.match(/\| Watched: ([^\n]+)/)?.[0];
-										const updatedRating = header.match(/\| (\d+)\/10/)?.[0];
-										const existingWatchedDate = block.match(/\| Watched: ([^\n]+)/)?.[0];
-										const existingRating = block.match(/\| (\d+)\/10/)?.[0];
-										let mergedBlock = block.trim();
-										// Merge watched date
-										if (updatedWatchedDate && !existingWatchedDate) {
-											mergedBlock = mergedBlock.replace(
-												/^S(\d+) Ep(\d+) \| ([^\n]*)/,
-												(match, s, e, rest) => `${match} ${updatedWatchedDate}`
-											);
-										}
-										// Merge rating
-										if (updatedRating && !existingRating) {
-											mergedBlock = mergedBlock.replace(
-												/^S(\d+) Ep(\d+) \| ([^\n]*)/,
-												(match, s, e, rest) => `${match} ${updatedRating}`
-											);
-										}
-										mergedEpisodes += `#### ${mergedBlock}\n`;
-									} else {
-										mergedEpisodes += `${header}\n`;
-									}
-								}
+								   for (const headerMatch of updatedEpisodeHeaders) {
+									   let header = headerMatch[0];
+									   const seasonNum = headerMatch[1];
+									   const episodeNum = headerMatch[2];
+									   const block = existingEpisodeBlocks.find(b => b.startsWith(`S${seasonNum} Ep${episodeNum}`));
+									   if (block) {
+										   const updatedWatchedDate = header.match(/\| Watched: ([^\n]+)/)?.[0];
+										   const updatedRating = header.match(/\| (\d+)\/10/)?.[0];
+										   let mergedBlock = block.trim();
+										   // Remove any existing rating from the block
+										   mergedBlock = mergedBlock.replace(/\| \d+\/10/g, '');
+										   // Remove any duplicate watched date
+										   if (updatedWatchedDate) {
+											   mergedBlock = mergedBlock.replace(/\| Watched: \[\[[^\]]+\]\]/g, '');
+										   }
+										   // Rebuild the header with updated watched date and rating
+										   // Extract episode title from the header string
+										   const titleMatch = header.match(/^#### S\d+ Ep\d+ \| ([^|\n]+)/);
+										   const episodeTitle = titleMatch ? titleMatch[1].trim() : '';
+										   let rebuiltHeader = `S${seasonNum} Ep${episodeNum} | ${episodeTitle}`;
+										   // Only append watched date if not already present
+										   if (updatedWatchedDate && !rebuiltHeader.includes(updatedWatchedDate)) {
+											   rebuiltHeader += updatedWatchedDate;
+										   }
+										   // Only append rating if not already present
+										   if (updatedRating && !rebuiltHeader.includes(updatedRating)) {
+											   rebuiltHeader += updatedRating;
+										   }
+										   // Add any extra notes/comments from the original block (after the first line)
+										   const extra = mergedBlock.split('\n').slice(1).join('\n');
+										   mergedEpisodes += `#### ${rebuiltHeader}${extra ? '\n' + extra : ''}\n`;
+									   } else {
+										   mergedEpisodes += `${header}\n`;
+									   }
+								   }
 								updatedContent = updatedContent.replace(/## Episodes[\s\S]*$/m, mergedEpisodes.trimEnd());
 							} else {
 								// Ensure each episode starts on a new line, but no extra blank lines
